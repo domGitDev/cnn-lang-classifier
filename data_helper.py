@@ -71,3 +71,4 @@ def construct_dataset(df, value_col, label_col, batch_size, test_split=0.15, see
         test_data = dataset.skip(train_size).take(test_size)
 
     return train_data, test_data
+

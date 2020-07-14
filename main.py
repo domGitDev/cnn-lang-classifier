@@ -9,7 +9,7 @@ import data_helper
 
 
 if __name__ == '__main__':
-    tf.compat.v1.disable_eager_execution()
+    #tf.compat.v1.disable_eager_execution()
 
     parser = argparse.ArgumentParser(description='Order book analysis.')
     parser.add_argument('-f', '--filename', type=str, help='dataset file')
@@ -29,5 +29,8 @@ if __name__ == '__main__':
     train_data, test_data = data_helper.construct_dataset(
                             df_lang, 'text', 'lang_code', args.batch_size)
 
-    sample = train_data.take(1)
-    print(sample)
+    data_iter = train_data.take(1)
+    for d, l in data_iter:
+        print(d, l)
+    
+
