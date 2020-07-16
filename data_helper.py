@@ -1,15 +1,13 @@
 import os
 import re
+import itertools
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from keras.preprocessing.text import Tokenizer
+from collections import Counter
 from keras.utils import to_categorical
+from keras.preprocessing.text import Tokenizer, one_hot
 from keras.preprocessing.sequence import pad_sequences
-
-tokenizer = None
-MAX_WORDS = 100000
-MAX_LENGTH = 1000
 
 
 def load_cvs_data(filename):
@@ -27,48 +25,104 @@ def data_by_column(df, col_name, col_value):
     return df.loc[df[col_name] == col_value]
 
 
-def construct_dataset(df, value_col, label_col, batch_size, test_split=0.15, seed=49):
-    global tokenizer, MAX_LENGTH
+def clean_str(string):
+    """
+    Tokenization/string cleaning for datasets.
+    Original taken from https://github.com/yoonkim/CNN_sentence/blob/master/process_data.py
+    """
+    string = re.sub(r"[^A-Za-z0-9(),!?\'\`]", " ", string)
+    string = re.sub(r"\'s", " \'s", string)
+    string = re.sub(r"\'ve", " \'ve", string)
+    string = re.sub(r"n\'t", " n\'t", string)
+    string = re.sub(r"\'re", " \'re", string)
+    string = re.sub(r"\'d", " \'d", string)
+    string = re.sub(r"\'ll", " \'ll", string)
+    string = re.sub(r",", " , ", string)
+    string = re.sub(r"!", " ! ", string)
+    string = re.sub(r"\(", " \( ", string)
+    string = re.sub(r"\)", " \) ", string)
+    string = re.sub(r"\?", " \? ", string)
+    string = re.sub(r"\s{2,}", " ", string)
+    return string.strip().lower()
 
+
+def build_vocabulary(sentences):
+    word_counts = Counter(itertools.chain(*sentences))
+    vocab_inv = [x[0] for x in word_counts.most_common()]
+    vocab_inv = list(sorted(vocab_inv))
+    vocab = {x: i for i, x in enumerate(vocab_inv)}
+    return [vocab, vocab_inv]
+
+
+
+def construct_dataset(df, value_col, label_col, batch_size, test_split=0.15, valid_split=0.2, seed=751):
     total = df[value_col].size
     texts = df[value_col].map(str).values
     labels = df[label_col].map(int).values
     
-    print(texts[:10])
-    print(labels[:10])
+    # build vocabulary list
+    texts = [clean_str(s) for s in texts]
+    _, vocab_inv = build_vocabulary(texts)
+    vocab_size = len(vocab_inv)
 
-    # get size of longest sentence
-    MAX_LENGTH = int(df[value_col].str.len().max())
-    tokenizer = Tokenizer(num_words=MAX_WORDS)
+    # encode sentences as int per words
+    text_codes = [one_hot(text, vocab_size) for text in texts]
+    MAX_LENGTH = max(len(val) for val in text_codes)
 
-    # convert text to sequence
-    tokenizer.fit_on_texts(texts)
-    sequences =  tokenizer.texts_to_sequences(texts)
-    word_index = tokenizer.word_index
-    print("unique words : {}".format(len(word_index)))
+    x = pad_sequences(text_codes, maxlen=MAX_LENGTH, padding='post', value=0.0)
+    y = to_categorical(labels)
 
-    # pad all sentences to same length
-    sequences = pad_sequences(sequences, maxlen=MAX_LENGTH+5)
+    print(x[:2])
+    print(y[:2])
 
-    # convert labels to categorial
-    labels = to_categorical(labels)
-
+    # split data into train, validation and test
+    test_size = 0
+    valid_size = 0
     train_size = total
-    if test_split:
-        test_size = int(total * 0.3)
-        test_size -= (test_size % batch_size)
+    if test_split > 0:
+        test_size = int(total * test_split)
+        if batch_size > 0:
+            test_size -= (test_size % batch_size)
         train_size = total - test_size
+
+    if valid_split > 0:
+        valid_size = int(train_size * valid_split)
+        if batch_size > 0:
+            valid_size -= (valid_size % batch_size)
+        train_size = train_size - valid_size
 
     if batch_size > 0:
         train_size -= (train_size % batch_size)
 
-    dataset = tf.data.Dataset.from_tensor_slices((sequences, labels))
+    # create tensorflow dataset
+    def _expand_function(item, label):
+        item = tf.expand_dims(item, 0)
+        label = tf.expand_dims(label, 0)
+        return item, label
+
+    dataset = tf.data.Dataset.from_tensor_slices((x, y))
     dataset = dataset.shuffle(total, seed=seed)
+    dataset = dataset.map(_expand_function)
+
+    test_data = None
+    valid_data = None
+
+    # split dataset variable into train, validation, test
+    if test_size > 0:
+        test_data = dataset.take(test_size)
+        dataset = dataset.skip(test_size)
+    
+    if valid_split > 0:
+        valid_data = dataset.take(valid_size)
+        dataset = dataset.skip(valid_size)
 
     train_data = dataset.take(train_size)
 
-    if test_size > 0:
-        test_data = dataset.skip(train_size).take(test_size)
+    train_data = train_data.repeat()
+    valid_data = valid_data.repeat()
+    test_data = test_data.repeat()
 
-    return train_data, test_data
+    oshape = [train_size, test_size, valid_size, MAX_LENGTH]
+
+    return train_data, test_data, valid_data, oshape, vocab_inv
 
