@@ -54,10 +54,8 @@ def build_vocabulary(sentences):
     return [vocab, vocab_inv]
 
 
-
-def construct_dataset(df, value_col, label_col, batch_size, test_split=0.15, valid_split=0.2, seed=751):
-    total = df[value_col].size
-    texts = df[value_col].map(str).values
+def pre_processing(df, val_col, label_col):
+    texts = df[val_col].map(str).values
     labels = df[label_col].map(int).values
     
     # build vocabulary list
@@ -69,13 +67,16 @@ def construct_dataset(df, value_col, label_col, batch_size, test_split=0.15, val
     text_codes = [one_hot(text, vocab_size) for text in texts]
     MAX_LENGTH = max(len(val) for val in text_codes)
 
-    x = pad_sequences(text_codes, maxlen=MAX_LENGTH, padding='post', value=0.0)
-    y = to_categorical(labels)
+    code_x = pad_sequences(text_codes, maxlen=MAX_LENGTH, padding='post', value=0.0)
+    code_y = to_categorical(labels)
 
-    print(x[:2])
-    print(y[:2])
+    return code_x, code_y, vocab_inv
+
+
+def construct_dataset(x, y, batch_size, test_split=0, valid_split=0, seed=434, shuffle=False):
 
     # split data into train, validation and test
+    total = len(x)
     test_size = 0
     valid_size = 0
     train_size = total
@@ -83,10 +84,10 @@ def construct_dataset(df, value_col, label_col, batch_size, test_split=0.15, val
         test_size = int(total * test_split)
         if batch_size > 0:
             test_size -= (test_size % batch_size)
-        train_size = total - test_size
+        train_size = train_size - test_size
 
     if valid_split > 0:
-        valid_size = int(train_size * valid_split)
+        valid_size = int(total * valid_split)
         if batch_size > 0:
             valid_size -= (valid_size % batch_size)
         train_size = train_size - valid_size
@@ -101,7 +102,8 @@ def construct_dataset(df, value_col, label_col, batch_size, test_split=0.15, val
         return item, label
 
     dataset = tf.data.Dataset.from_tensor_slices((x, y))
-    dataset = dataset.shuffle(total, seed=seed)
+    if shuffle:
+        dataset = dataset.shuffle(total, seed=seed)
     dataset = dataset.map(_expand_function)
 
     test_data = None
