@@ -55,12 +55,12 @@ if __name__ == '__main__':
     parser.add_argument('--test_perc', default=0.1, type=float)
     parser.add_argument('--valid_perc', default=0.3, type=float)
     parser.add_argument('--drop', default=0.1, type=float)
-    parser.add_argument('--embed_dim', default=600, type=int)
+    parser.add_argument('--embed_dim', default=512, type=int)
     parser.add_argument('--num_filters', default=16, type=int)
     parser.add_argument('--filter_sizes', default='[3,4,5]', type=str,
                         help='convolution over 3, 4 and 5 words: [3,4,5]')
     parser.add_argument('--shuffle', default=True, type=bool)
-    parser.add_argument('--seed', default=434, type=int)
+    parser.add_argument('--seed', default=411, type=int)
     parser.add_argument('--log_dir', default='./logs', 
                         type=str, help='log directory path')
 
@@ -78,17 +78,38 @@ if __name__ == '__main__':
         os.makedirs(args.log_dir)
 
     df_lang = data_helper.load_cvs_data(args.filename)
+    print(df_lang.head())
+    print(df_lang[df_lang.isnull().any(axis=1)])
+
+    # drop rows with null values
+    df_lang = df_lang.dropna(how='any',axis=0) 
     print(df_lang.isnull().any().describe(include='all'))
 
     uniq_labels = np.unique(df_lang['language'].values).tolist()
     uniq_labels = list(sorted(uniq_labels))
     df_lang['lang_code'] = df_lang['language'].map(lambda x: uniq_labels.index(x))
 
+    fig, axs = plt.subplots(1, 2, figsize = (18, 30))
+
+    g = sns.countplot(df_lang['lang_code'], ax=axs[0])
+    g.set_title('Original')
+    g.set_xticklabels(uniq_labels)
+
+    max_size = df_lang['lang_code'].value_counts().max()
+    lst = [df_lang]
+    for class_index, group in df_lang.groupby('lang_code'):
+        lst.append(group.sample(max_size-len(group), replace=True))
+    df_lang = pd.concat(lst)
+
     print([(i,label) for i,label in enumerate(uniq_labels)])
     print(df_lang['language'].value_counts())
-    g = sns.countplot(df_lang['lang_code'])
+
+    g = sns.countplot(df_lang['lang_code'], ax=axs[1])
+    g.set_title('Balanced')
     g.set_xticklabels(uniq_labels)
+
     plt.show()
+    plt.close(fig)
 
     # convert texts and labels into codes
     code_x, code_y, vocab_inv, max_length = data_helper.pre_processing(df_lang, 'text', 'lang_code')
