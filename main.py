@@ -91,23 +91,27 @@ if __name__ == '__main__':
 
     fig, axs = plt.subplots(1, 2, figsize = (18, 30))
 
+    # plot imbalanced dataset
     g = sns.countplot(df_lang['lang_code'], ax=axs[0])
     g.set_title('Original')
     g.set_xticklabels(uniq_labels)
 
+    # oversample dataset to balance each class
     max_size = df_lang['lang_code'].value_counts().max()
     lst = [df_lang]
     for class_index, group in df_lang.groupby('lang_code'):
         lst.append(group.sample(max_size-len(group), replace=True))
     df_lang = pd.concat(lst)
 
-    print([(i,label) for i,label in enumerate(uniq_labels)])
-    print(df_lang['language'].value_counts())
-
+    # plot balanced dataset
     g = sns.countplot(df_lang['lang_code'], ax=axs[1])
     g.set_title('Balanced')
     g.set_xticklabels(uniq_labels)
 
+    print([(i,label) for i,label in enumerate(uniq_labels)])
+    print(df_lang['language'].value_counts())
+
+    # display figure
     plt.show()
     plt.close(fig)
 
