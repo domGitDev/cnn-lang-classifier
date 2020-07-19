@@ -70,7 +70,7 @@ def pre_processing(df, val_col, label_col):
     code_x = pad_sequences(text_codes, maxlen=MAX_LENGTH, padding='post', value=0.0)
     code_y = to_categorical(labels)
 
-    return code_x, code_y, vocab_inv
+    return code_x, code_y, vocab_inv, MAX_LENGTH
 
 
 def construct_dataset(x, y, batch_size, test_split=0, valid_split=0, seed=434, shuffle=False):
@@ -124,7 +124,7 @@ def construct_dataset(x, y, batch_size, test_split=0, valid_split=0, seed=434, s
     valid_data = valid_data.repeat()
     test_data = test_data.repeat()
 
-    oshape = [train_size, test_size, valid_size, MAX_LENGTH]
+    sizes = [train_size, test_size, valid_size]
 
-    return train_data, test_data, valid_data, oshape, vocab_inv
+    return train_data, test_data, valid_data, sizes
 

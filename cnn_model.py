@@ -1,3 +1,5 @@
+import os
+import sys
 from keras.models import Model
 from keras.models import Sequential
 from keras.callbacks import ModelCheckpoint
@@ -8,7 +10,8 @@ from keras.layers import Reshape, Flatten, Dropout, Concatenate, Lambda
 import tensorflow as tf
 
 
-def create_model(input_length, num_class, vocab_size, embed_dim, num_filters=10, filter_sizes=(), drop=0.5):
+def create_model(input_length, num_class, vocab_size, embed_dim, 
+        num_filters=10, filter_sizes=(), drop=0.5, log_dir='./logs'):
     
     inputs = Input(shape=(input_length,), dtype='int32')
     embedding = Embedding(input_dim=vocab_size, output_dim=embed_dim, input_length=input_length)(inputs)
@@ -44,8 +47,8 @@ def create_model(input_length, num_class, vocab_size, embed_dim, num_filters=10,
     # this creates a model that includes
     model = Model(inputs=inputs, outputs=output)
 
-    checkpoint = ModelCheckpoint(
-                    'weights.{epoch:03d}-{val_acc:.4f}.hdf5', 
+    checkpoint = ModelCheckpoint(os.path.join(log_dir,
+                    'weights.{epoch:03d}-{val_accuracy:.4f}.hdf5'), 
                     monitor='val_accuracy', verbose=1, 
                     save_best_only=True, mode='auto')
 
