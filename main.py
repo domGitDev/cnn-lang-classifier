@@ -1,6 +1,7 @@
 import os
 import sys
 import ast
+import json
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 
@@ -119,12 +120,14 @@ if __name__ == '__main__':
     plt.close(fig)
 
     # convert texts and labels into codes
-    code_x, code_y, vocab_size, max_length = data_helper.pre_processing(df_lang, 'text', 'lang_code')
+    results = data_helper.pre_processing(df_lang, 'text', 'lang_code')
+    tokenizer, code_x, code_y, vocab_size, max_length = results
 
     # convert numpy array into tensorflow Dataset 
     # split dataset in train, validation and test
-    results = data_helper.construct_dataset(code_x, code_y, args.batch_size, args.test_perc, 
-                                            args.valid_perc, args.seed, args.shuffle)
+    results = data_helper.construct_dataset(
+                        code_x, code_y, args.batch_size, args.test_perc, 
+                        args.valid_perc, args.seed, args.shuffle)
 
     # unpack results 
     train_data, test_data, valid_data, shape = results
@@ -154,8 +157,14 @@ if __name__ == '__main__':
                     validation_steps=valid_steps,
                     verbose=1)
 
-    out_file = os.path.join(args.log_dir, 'model.hdf5')
-    model.save(out_file)
+    # save trained model to file
+    model_file = os.path.join(args.log_dir, 'model.hdf5')
+    model.save(model_file)
+
+    tokenizer_json = tokenizer.to_json()
+    tokenizer_file = os.path.join(args.log_dir, 'tokenizer.json') 
+    with open('tokenizer.json', 'w', encoding='utf-8') as f:  
+          f.write(json.dumps(tokenizer_json, ensure_ascii=False))
 
     # log to console train and test accuracy
     train_iter = iter(train_data)
