@@ -38,9 +38,10 @@ if __name__ == '__main__':
 
     # load tokenizer object
     tokenizer = None
-    with open('tokenizer.json') as f: 
+    with open(args.tokenizer_file) as f: 
         data = json.load(f) 
         tokenizer = tokenizer_from_json(data)
+        tokenizer.oov_token = True
     
     model = load_model(args.model_file)
     model.summary()
@@ -49,15 +50,17 @@ if __name__ == '__main__':
 
     # drop rows with null values
     df_lang = df_lang.dropna(how='any',axis=0) 
-    print(df_lang.head())
+
+    for text, label in zip(df_lang['text'][5:10], df_lang['language'][5:10]):
+        print('{0} \t\t\t\t{1}'.format(text, label))
 
     texts = df_lang['text'].map(str).values
     #np.random.shuffle(texts)
-    encoded_texts = data_helper.pre_processing_predict(texts, tokenizer)
+    tokenizer, encoded_texts, _, _ = data_helper.pre_processing(texts, tokenizer)
 
-    predictions = model.predict(encoded_texts[:5])
-    clasess = np.argmax(predictions, axis=1)
+    predictions = model.predict(encoded_texts[5:10])
+    labels = np.argmax(predictions, axis=1)
 
-    print(clasess)
+    print([ClASSES[i] for i in labels])
 
 
