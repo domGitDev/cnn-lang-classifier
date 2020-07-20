@@ -51,7 +51,7 @@ def create_model(input_length, num_class, vocab_size, embed_dim,
     model = Model(inputs=inputs, outputs=output)
 
     #opt = Adamax(learning_rate=1e-4, beta_1=0.9, beta_2=0.999)
-    opt = SGD(lr=1e-4, decay=1e-8, momentum=0.9, nesterov=False)
+    opt = SGD(lr=1e-4, decay=1e-8, momentum=0.9, nesterov=True)
 
     model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
 
