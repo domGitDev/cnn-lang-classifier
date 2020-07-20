@@ -9,9 +9,6 @@ from keras.layers import Activation, BatchNormalization
 from keras.layers import Input, Dense, Embedding, Conv2D, MaxPool2D
 from keras.layers import Reshape, Flatten, Dropout, Concatenate, Lambda
 
-from keras import backend as K
-from keras.utils.generic_utils import get_custom_objects
-
 
 def create_model(input_length, num_class, vocab_size, embed_dim, 
         num_filters=10, filter_sizes=(), drop=0.5, log_dir='./logs'):
