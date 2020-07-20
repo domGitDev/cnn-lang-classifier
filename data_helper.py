@@ -54,10 +54,21 @@ def build_vocabulary(sentences):
     return [vocab, vocab_inv]
 
 
-def pre_processing(df, val_col, label_col):
+def pre_processing(df, val_col, label_col, MAX_LENGTH=200):
     texts = df[val_col].map(str).values
     labels = df[label_col].map(int).values
+
+    t = Tokenizer(oov_token=True)
+    t.fit_on_texts(texts)
     
+    # summarize what was learned
+    print('Vocab Size', len(t.word_index) + 1)
+    print('Num Docs', t.document_count)
+
+    # integer encode documents
+    text_codes = t.texts_to_sequences(texts)
+
+    '''
     # build vocabulary list
     texts = [clean_str(s) for s in texts]
     _, vocab_inv = build_vocabulary(texts)
@@ -66,11 +77,13 @@ def pre_processing(df, val_col, label_col):
     # encode sentences as int per words
     text_codes = [one_hot(text, vocab_size) for text in texts]
     MAX_LENGTH = max(len(val) for val in text_codes)
+    '''
+    vocab_size = len(t.word_index) + 1
 
     code_x = pad_sequences(text_codes, maxlen=MAX_LENGTH, padding='post', value=0.0)
     code_y = to_categorical(labels)
 
-    return code_x, code_y, vocab_inv, MAX_LENGTH
+    return code_x, code_y, vocab_size, MAX_LENGTH
 
 
 def construct_dataset(x, y, batch_size, test_split=0, valid_split=0, seed=434, shuffle=False):
