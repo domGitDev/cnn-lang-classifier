@@ -9,9 +9,11 @@ import argparse
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras.utils import plot_model
 
 import data_helper
 from cnn_model import create_model
+
 
 
 def plot_history(history):# Plot the loss and accuracy
@@ -53,8 +55,8 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', default=100, type=int)
     parser.add_argument('--batch_size', default=32, type=int)
     parser.add_argument('--test_perc', default=0.1, type=float)
-    parser.add_argument('--valid_perc', default=0.3, type=float)
-    parser.add_argument('--drop', default=0.1, type=float)
+    parser.add_argument('--valid_perc', default=0.35, type=float)
+    parser.add_argument('--drop', default=0.5, type=float)
     parser.add_argument('--embed_dim', default=512, type=int)
     parser.add_argument('--num_filters', default=16, type=int)
     parser.add_argument('--filter_sizes', default='[3,4,5]', type=str,
@@ -88,6 +90,7 @@ if __name__ == '__main__':
     uniq_labels = np.unique(df_lang['language'].values).tolist()
     uniq_labels = list(sorted(uniq_labels))
     df_lang['lang_code'] = df_lang['language'].map(lambda x: uniq_labels.index(x))
+    print('Num Rows', df_lang['lang_code'].size)
 
     fig, axs = plt.subplots(1, 2, figsize = (18, 30))
 
@@ -116,8 +119,7 @@ if __name__ == '__main__':
     plt.close(fig)
 
     # convert texts and labels into codes
-    code_x, code_y, vocab_inv, max_length = data_helper.pre_processing(df_lang, 'text', 'lang_code')
-    vocab_size = len(vocab_inv)
+    code_x, code_y, vocab_size, max_length = data_helper.pre_processing(df_lang, 'text', 'lang_code')
 
     # convert numpy array into tensorflow Dataset 
     # split dataset in train, validation and test
@@ -142,6 +144,7 @@ if __name__ == '__main__':
                                     args.num_filters, filter_sizes, args.drop, args.log_dir)
 
     model.summary()
+    plot_model(model, to_file=args.log_dir + '/cnn_lang.png', show_shapes=True)
 
     # train CNN model
     history = model.fit_generator(train_iter,
