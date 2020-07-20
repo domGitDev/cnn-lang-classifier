@@ -83,7 +83,21 @@ def pre_processing(df, val_col, label_col, MAX_LENGTH=200):
     code_x = pad_sequences(text_codes, maxlen=MAX_LENGTH, padding='post', value=0.0)
     code_y = to_categorical(labels)
 
-    return code_x, code_y, vocab_size, MAX_LENGTH
+    return t, code_x, code_y, vocab_size, MAX_LENGTH
+
+
+def pre_processing_predict(texts, tokenizer=None, MAX_LENGTH=200):  
+    if not (tokenizer is None):
+        t = tokenizer
+    else:  
+        t = Tokenizer(oov_token=True)
+        t.fit_on_texts(texts)
+    
+    # integer encode documents
+    text_codes = t.texts_to_sequences(texts)
+    code_x = pad_sequences(text_codes, maxlen=MAX_LENGTH, padding='post', value=0.0)
+    
+    return code_x
 
 
 def construct_dataset(x, y, batch_size, test_split=0, valid_split=0, seed=434, shuffle=False):
