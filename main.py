@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.utils import plot_model
+from keras.utils import to_categorical
 
 import data_helper
 from cnn_model import create_model
@@ -120,9 +121,14 @@ if __name__ == '__main__':
     plt.close(fig)
 
     # convert texts and labels into codes
-    results = data_helper.pre_processing(df_lang, 'text', 'lang_code')
-    tokenizer, code_x, code_y, vocab_size, max_length = results
+    texts = df_lang['text'].map(str).values
+    labels = df_lang['lang_code'].map(int).values
 
+    results = data_helper.pre_processing(texts)
+    tokenizer, code_x, vocab_size, max_length = results
+
+    code_y = to_categorical(labels)
+    
     # convert numpy array into tensorflow Dataset 
     # split dataset in train, validation and test
     results = data_helper.construct_dataset(
@@ -163,7 +169,7 @@ if __name__ == '__main__':
 
     tokenizer_json = tokenizer.to_json()
     tokenizer_file = os.path.join(args.log_dir, 'tokenizer.json') 
-    with open('tokenizer.json', 'w', encoding='utf-8') as f:  
+    with open(tokenizer_file, 'w', encoding='utf-8') as f:  
           f.write(json.dumps(tokenizer_json, ensure_ascii=False))
 
     # log to console train and test accuracy
