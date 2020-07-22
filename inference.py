@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Train language classifier.')
     parser.add_argument('-f', '--filename', type=str, help='dataset file')
-    parser.add_argument('--model_file', default='./logs/model.hdf5', 
+    parser.add_argument('--model_file', default='./logs/model.h5', 
                         type=str, help='path to trained model')
     parser.add_argument('--tokenizer_file', default='./logs/tokenizer.json', 
                         type=str, help='path to tokenizer used during training')
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     with open(args.tokenizer_file) as f: 
         data = json.load(f) 
         tokenizer = tokenizer_from_json(data)
-        tokenizer.oov_token = True
+        print('Loaded tokenizer')
     
     model = load_model(args.model_file)
     model.summary()
@@ -51,16 +51,18 @@ if __name__ == '__main__':
     # drop rows with null values
     df_lang = df_lang.dropna(how='any',axis=0) 
 
-    for text, label in zip(df_lang['text'][5:10], df_lang['language'][5:10]):
-        print('{0} \t\t\t\t{1}'.format(text, label))
-
+    st = 5
+    ed = 20
+    
     texts = df_lang['text'].map(str).values
-    #np.random.shuffle(texts)
-    tokenizer, encoded_texts, _, _ = data_helper.pre_processing(texts, tokenizer)
+    np.random.shuffle(texts)
+    tokenizer, encoded_texts, _, _ = data_helper.pre_processing(texts[st:ed], tokenizer)
 
-    predictions = model.predict(encoded_texts[5:10])
+    predictions = model.predict(encoded_texts)
     labels = np.argmax(predictions, axis=1)
 
-    print([ClASSES[i] for i in labels])
+    print('True Label\tPred Label\t\ttext')
+    for text, label, index in zip(df_lang['text'][st:ed], df_lang['language'][st:ed], labels):
+        print('{0:10s}\t{1:10s}\t\t{2}'.format(label, ClASSES[index], text))
 
 
