@@ -6,7 +6,8 @@ from keras.models import Sequential
 from keras.callbacks import ModelCheckpoint
 from keras.optimizers import Adam, Adamax, SGD
 from keras.layers import Activation, BatchNormalization
-from keras.layers import Input, Dense, Embedding, Conv2D, MaxPool2D
+from keras.layers import Embedding, Conv2D, MaxPool2D
+from keras.layers import Input, Dense, Conv1D, MaxPooling1D, LSTM
 from keras.layers import Reshape, Flatten, Dropout, Concatenate, Lambda
 
 
@@ -54,12 +55,13 @@ def create_model(input_length, num_class, vocab_size, embed_dim,
 
     return model
 
-def create_model2(input_length, num_class, vocab_size, embed_dim, drop=0.5):
+
+def create_model2(input_length, num_class, vocab_size, embed_dim, num_filters=64, filter_size=5, drop=0.5):
 
     model = Sequential()
     model.add(Embedding(input_dim=vocab_size, output_dim=embed_dim, input_length=input_length))
     model.add(Dropout(drop))
-    model.add(Conv1D(64, 5, activation='relu'))
+    model.add(Conv1D(num_filters, filter_size, activation='relu'))
     model.add(MaxPooling1D(pool_size=4))
     model.add(LSTM(embed_dim, dropout=drop, recurrent_dropout=drop))
     model.add(Dense(num_class, activation='sigmoid'))
