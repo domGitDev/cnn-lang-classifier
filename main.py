@@ -14,9 +14,9 @@ from tensorflow.keras.utils import plot_model
 from keras.utils import to_categorical
 
 import data_helper
-from cnn_model import create_model
+from cnn_model import create_model, create_model2
 
-
+ClASSES = ['afrikaans', 'english', 'nederlands']
 
 def plot_history(history):# Plot the loss and accuracy
     # Format the train history
@@ -48,23 +48,55 @@ def plot_history(history):# Plot the loss and accuracy
     plt.close(fig)
 
 
+def test_prediction_to_csv(test_iter):
+    print('\nIter over test data')
+    test_codex = []
+    test_codey = []
+
+    for x, y in test_iter:
+        test_codex.append(x[0].numpy())
+        test_codey.append(y.numpy()[0])
+
+    print('Run test prediction...')
+    predictions = model.predict(np.array(test_codex), verbose=1)
+    pred_labels = np.argmax(predictions, axis=1)
+    true_labels = np.argmax(test_codey, axis=1)
+
+    test_codex = [[c for c in codes if c != 0] for codes in test_codex]
+    test_texts = tokenizer.sequences_to_texts(test_codex)
+
+    otest_file = os.path.join(args.log_dir, 'test.csv')
+    with open(otest_file, 'w') as f:        
+        lines = []
+        lines.append('True Label\tPred Label\ttext')
+        print('True Label\tPred Label\t\ttext')
+
+        for text, index, pred_index in zip(test_texts, true_labels, pred_labels):
+            lines.append('{0}\t{1}\t{2}\n'.format(ClASSES[index], ClASSES[pred_index], text))
+            print('{0:10s}\t{1:10s}\t\t{2}'.format(ClASSES[index], ClASSES[pred_index], text))
+
+        f.writelines(lines)
+
+    print('Ouput:', otest_file)
+
+
 if __name__ == '__main__':
     #tf.compat.v1.disable_eager_execution()
 
     parser = argparse.ArgumentParser(description='Train language classifier.')
     parser.add_argument('-f', '--filename', type=str, help='dataset file')
     parser.add_argument('--num_class', default=3, type=int)
-    parser.add_argument('--epochs', default=100, type=int)
+    parser.add_argument('--epochs', default=10, type=int)
     parser.add_argument('--batch_size', default=32, type=int)
-    parser.add_argument('--test_perc', default=0.1, type=float)
+    parser.add_argument('--test_perc', default=0.25, type=float)
     parser.add_argument('--valid_perc', default=0.35, type=float)
-    parser.add_argument('--drop', default=0.5, type=float)
-    parser.add_argument('--embed_dim', default=512, type=int)
-    parser.add_argument('--num_filters', default=16, type=int)
-    parser.add_argument('--filter_sizes', default='[3,4,5]', type=str,
-                        help='convolution over 3, 4 and 5 words: [3,4,5]')
+    parser.add_argument('--drop', default=0.1, type=float)
+    parser.add_argument('--embed_dim', default=128, type=int)
+    parser.add_argument('--num_filters', default=64, type=int)
+    parser.add_argument('--filter_sizes', default='[2,3,4,5]', type=str,
+                        help='convolution over 2, 3 and 5 words: [2,3,5]')
     parser.add_argument('--shuffle', default=True, type=bool)
-    parser.add_argument('--seed', default=411, type=int)
+    parser.add_argument('--seed', default=231, type=int)
     parser.add_argument('--log_dir', default='./logs', 
                         type=str, help='log directory path')
 
@@ -89,9 +121,16 @@ if __name__ == '__main__':
     df_lang = df_lang.dropna(how='any',axis=0) 
     print(df_lang.isnull().any().describe(include='all'))
 
+    # remove sentence with duplicate labels
+    groups = df_lang.groupby('text').size().reset_index(name='counts')
+    duplicated = groups.loc[groups['counts'] > 1]
+    for sentence in duplicated['text']:
+        indexes = df_lang.loc[df_lang['text'] == sentence].index
+        df_lang.drop(indexes, inplace = True)
+    
     uniq_labels = np.unique(df_lang['language'].values).tolist()
     uniq_labels = list(sorted(uniq_labels))
-    df_lang['lang_code'] = df_lang['language'].map(lambda x: uniq_labels.index(x))
+    df_lang['lang_code'] = df_lang['language'].map(lambda x: ClASSES.index(str(x).lower()))
     print('Num Rows', df_lang['lang_code'].size)
 
     fig, axs = plt.subplots(1, 2, figsize = (18, 30))
@@ -104,8 +143,8 @@ if __name__ == '__main__':
     # oversample dataset to balance each class
     max_size = df_lang['lang_code'].value_counts().max()
     lst = [df_lang]
-    for class_index, group in df_lang.groupby('lang_code'):
-        lst.append(group.sample(max_size-len(group), replace=True))
+    for class_index, group in df_lang.groupby('language'):
+        lst.append(group.sample(max_size-len(group), random_state=1, replace=True))
     df_lang = pd.concat(lst)
 
     # plot balanced dataset
@@ -152,19 +191,22 @@ if __name__ == '__main__':
     model = create_model(max_length, args.num_class, vocab_size, args.embed_dim, 
                                     args.num_filters, filter_sizes, args.drop, args.log_dir)
 
+    #model = create_model2(max_length, args.num_class, vocab_size, args.embed_dim, 0.2)
+
     model.summary()
     plot_model(model, to_file=args.log_dir + '/cnn_lang.png', show_shapes=True)
 
     # train CNN model
     history = model.fit_generator(train_iter,
-                    epochs=args.epochs, 
+                    epochs=args.epochs,
                     steps_per_epoch=train_steps,
                     validation_data=valid_iter,
                     validation_steps=valid_steps,
+                    shuffle=False,
                     verbose=1)
 
     # save trained model to file
-    model_file = os.path.join(args.log_dir, 'model.hdf5')
+    model_file = os.path.join(args.log_dir, 'model.h5')
     model.save(model_file)
 
     tokenizer_json = tokenizer.to_json()
@@ -181,3 +223,7 @@ if __name__ == '__main__':
 
     # plot train vs validation accuracy
     plot_history(history)
+
+    # output test prediction to csv file
+    test_iter = iter(test_data)
+    test_prediction_to_csv(test_iter)

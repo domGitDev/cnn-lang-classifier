@@ -57,15 +57,17 @@ def build_vocabulary(sentences):
 def pre_processing(texts, tokenizer=None, MAX_LENGTH=200):  
     if not (tokenizer is None):
         t = tokenizer
+        texts = [clean_str(s) for s in texts]
     else:  
-        t = Tokenizer(oov_token=True)
-
-    t.fit_on_texts(texts)
+        t = Tokenizer(oov_token='UNK')
+        t.fit_on_texts(texts)
     vocab_size = len(t.word_index) + 1
     
     # integer encode documents
     text_codes = t.texts_to_sequences(texts)
     code_x = pad_sequences(text_codes, maxlen=MAX_LENGTH, padding='post', value=0.0)
+
+    print(code_x[:1])
     
     return t, code_x, vocab_size, MAX_LENGTH
 
@@ -119,7 +121,7 @@ def construct_dataset(x, y, batch_size, test_split=0, valid_split=0, seed=434, s
 
     train_data = train_data.repeat()
     valid_data = valid_data.repeat()
-    test_data = test_data.repeat()
+    #test_data = test_data
 
     sizes = [train_size, test_size, valid_size]
 
