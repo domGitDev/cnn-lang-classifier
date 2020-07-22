@@ -2,6 +2,7 @@ import os
 import sys
 import ast
 import json
+from matplotlib import cm
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 
@@ -74,10 +75,11 @@ def plot_test_prediction(test_iter):
     
     # plot correct and miss prediction per classes
     fig, axs = plt.subplots(1, len(dfs), figsize = (18, 30))
+    colors = cm.hsv(np.random.rand(len(dfs)))
 
     for i, (lang, df) in enumerate(dfs):
         print(df.head())
-        df['pred_language'].value_counts().plot.bar(ax=axs[i])
+        df['pred_language'].value_counts().plot.bar(ax=axs[i], color=colors[i])
         axs[i].set_title(lang)
         i += 1
 
