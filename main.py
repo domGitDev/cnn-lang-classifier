@@ -59,25 +59,31 @@ def test_prediction_to_csv(test_iter):
 
     print('Run test prediction...')
     predictions = model.predict(np.array(test_codex), verbose=1)
-    pred_labels = np.argmax(predictions, axis=1)
-    true_labels = np.argmax(test_codey, axis=1)
+    pred_indexs = np.argmax(predictions, axis=1)
+    true_indexs = np.argmax(test_codey, axis=1)
+
+    true_labels = [ClASSES[i] for i in true_indexs]
+    pred_labels = [ClASSES[i] for i in pred_indexs]
 
     test_codex = [[c for c in codes if c != 0] for codes in test_codex]
     test_texts = tokenizer.sequences_to_texts(test_codex)
+    test_df = pd.DataFrame({'language':true_labels, 'pred_language': pred_labels})
 
-    otest_file = os.path.join(args.log_dir, 'test.csv')
-    with open(otest_file, 'w') as f:        
-        lines = []
-        lines.append('True Label\tPred Label\ttext')
-        print('True Label\tPred Label\t\ttext')
+    # construct how many miss prediction
+    gb = test_df.groupby('language')
+    dfs = [(x, gb.get_group(x).reset_index()) for x in gb.groups]
+    
+    # plot correct and miss prediction per classes
+    fig, axs = plt.subplots(1, len(dfs), figsize = (18, 30))
 
-        for text, index, pred_index in zip(test_texts, true_labels, pred_labels):
-            lines.append('{0}\t{1}\t{2}\n'.format(ClASSES[index], ClASSES[pred_index], text))
-            print('{0:10s}\t{1:10s}\t\t{2}'.format(ClASSES[index], ClASSES[pred_index], text))
+    for i, (lang, df) in enumerate(dfs):
+        print(df.head())
+        df['pred_language'].value_counts().plot.bar(ax=axs[i])
+        axs[i].set_title(lang)
+        i += 1
 
-        f.writelines(lines)
-
-    print('Ouput:', otest_file)
+    plt.show()
+    plt.close(fig)
 
 
 if __name__ == '__main__':
@@ -86,7 +92,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train language classifier.')
     parser.add_argument('-f', '--filename', type=str, help='dataset file')
     parser.add_argument('--num_class', default=3, type=int)
-    parser.add_argument('--epochs', default=10, type=int)
+    parser.add_argument('--epochs', default=40, type=int)
     parser.add_argument('--batch_size', default=32, type=int)
     parser.add_argument('--test_perc', default=0.25, type=float)
     parser.add_argument('--valid_perc', default=0.35, type=float)
