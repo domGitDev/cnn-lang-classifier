@@ -48,7 +48,7 @@ def plot_history(history):# Plot the loss and accuracy
     plt.close(fig)
 
 
-def test_prediction_to_csv(test_iter):
+def plot_test_prediction(test_iter):
     print('\nIter over test data')
     test_codex = []
     test_codey = []
@@ -66,7 +66,6 @@ def test_prediction_to_csv(test_iter):
     pred_labels = [ClASSES[i] for i in pred_indexs]
 
     test_codex = [[c for c in codes if c != 0] for codes in test_codex]
-    test_texts = tokenizer.sequences_to_texts(test_codex)
     test_df = pd.DataFrame({'language':true_labels, 'pred_language': pred_labels})
 
     # construct how many miss prediction
@@ -232,4 +231,4 @@ if __name__ == '__main__':
 
     # output test prediction to csv file
     test_iter = iter(test_data)
-    test_prediction_to_csv(test_iter)
+    plot_test_prediction(test_iter)
