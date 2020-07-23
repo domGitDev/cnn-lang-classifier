@@ -101,7 +101,7 @@ if __name__ == '__main__':
     parser.add_argument('--drop', default=0.1, type=float)
     parser.add_argument('--embed_dim', default=128, type=int)
     parser.add_argument('--num_filters', default=64, type=int)
-    parser.add_argument('--filter_sizes', default='[2,3,4,5]', type=str,
+    parser.add_argument('--filter_sizes', default='[2,3,4]', type=str,
                         help='convolution over 2, 3 and 5 words: [2,3,5]')
     parser.add_argument('--shuffle', default=True, type=bool)
     parser.add_argument('--seed', default=231, type=int)
