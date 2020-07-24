@@ -23,6 +23,10 @@ if __name__ == '__main__':
                         type=str, help='path to trained model')
     parser.add_argument('--tokenizer_file', default='./logs/tokenizer.json', 
                         type=str, help='path to tokenizer used during training')
+    parser.add_argument('--st_index', default=5, type=int,
+                        help='start dataset selection range')
+    parser.add_argument('--ed_index', default=20, type=int,
+                        help='end dataset selection range')
 
     args = parser.parse_args()
     
@@ -51,8 +55,11 @@ if __name__ == '__main__':
     # drop rows with null values
     df_lang = df_lang.dropna(how='any',axis=0) 
 
-    st = 5
-    ed = 20
+    # select dataset by index
+    st = args.st_index
+    ed = args.ed_index
+    if ed == -1:
+        ed = df_lang['text'].size
     
     texts = df_lang['text'].map(str).values
     np.random.shuffle(texts)
