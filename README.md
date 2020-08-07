@@ -20,6 +20,4 @@ python inference.py -f ./data/lang_data.csv
 
 # CSV data format
 
-text      |   labels
-
 sentence  |   text label
